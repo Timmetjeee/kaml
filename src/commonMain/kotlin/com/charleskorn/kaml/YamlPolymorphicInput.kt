@@ -32,7 +32,7 @@ import kotlinx.serialization.modules.SerializersModuleCollector
 import kotlin.reflect.KClass
 
 @OptIn(ExperimentalSerializationApi::class)
-internal class YamlPolymorphicInput(private val typeName: String, private val typeNamePath: YamlPath, private val contentNode: YamlNode, context: SerializersModule, configuration: YamlConfiguration) : YamlInput(contentNode, context, configuration) {
+internal class YamlPolymorphicInput(private val typeName: String?, private val typeNamePath: YamlPath, private val contentNode: YamlNode, context: SerializersModule, configuration: YamlConfiguration) : YamlInput(contentNode, context, configuration) {
     private var currentField = CurrentField.NotStarted
     private lateinit var contentDecoder: YamlInput
 
@@ -71,7 +71,10 @@ internal class YamlPolymorphicInput(private val typeName: String, private val ty
     override fun decodeFloat(): Float = maybeCallOnContent("decodeFloat", blockOnContent = YamlInput::decodeFloat)
     override fun decodeDouble(): Double = maybeCallOnContent("decodeDouble", blockOnContent = YamlInput::decodeDouble)
     override fun decodeChar(): Char = maybeCallOnContent("decodeChar", blockOnContent = YamlInput::decodeChar)
-    override fun decodeString(): String = maybeCallOnContent(blockOnType = { typeName }, blockOnContent = YamlInput::decodeString)
+    override fun decodeString(): String {
+        if (typeName == null) return maybeCallOnContent("decodeString", blockOnContent = YamlInput::decodeString)
+        return maybeCallOnContent(blockOnType = { typeName }, blockOnContent = YamlInput::decodeString)
+    }
     override fun decodeEnum(enumDescriptor: SerialDescriptor): Int = maybeCallOnContent("decodeEnum") { decodeEnum(enumDescriptor) }
 
     override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder {

@@ -76,7 +76,7 @@ public sealed class YamlInput(
 
         private fun createPolymorphicMapDeserializer(node: YamlMap, context: SerializersModule, configuration: YamlConfiguration): YamlPolymorphicInput {
             val desiredKey = configuration.polymorphismPropertyName
-            when (val typeName = node.getValue(desiredKey)) {
+            return when (val typeName = node.get<YamlNode>(desiredKey)) {
                 is YamlList -> throw InvalidPropertyValueException(desiredKey, "expected a string, but got a list", typeName.path)
                 is YamlMap -> throw InvalidPropertyValueException(desiredKey, "expected a string, but got a map", typeName.path)
                 is YamlNull -> throw InvalidPropertyValueException(desiredKey, "expected a string, but got a null value", typeName.path)
@@ -84,13 +84,14 @@ public sealed class YamlInput(
                 is YamlScalar -> {
                     val remainingProperties = node.withoutKey(desiredKey)
 
-                    return YamlPolymorphicInput(typeName.content, typeName.path, remainingProperties, context, configuration)
+                    YamlPolymorphicInput(typeName.content, typeName.path, remainingProperties, context, configuration)
+                }
+                null -> {
+                    if (configuration.strictMode) throw MissingRequiredPropertyException(desiredKey, node.path)
+
+                    YamlPolymorphicInput(null, node.path, node, context, configuration)
                 }
             }
-        }
-
-        private fun YamlMap.getValue(desiredKey: String): YamlNode {
-            return this.get(desiredKey) ?: throw MissingRequiredPropertyException(desiredKey, this.path)
         }
 
         private fun YamlMap.withoutKey(key: String): YamlMap {
